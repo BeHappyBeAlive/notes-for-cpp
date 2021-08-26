@@ -3,18 +3,38 @@
 #include<stack>
 #include<queue>
 #include<vector>
+#include<cmath>
 using namespace std;
-//
 
 
 template<typename T, typename Compare = less<T>>
 class BSTree
 {
 public:
-	BSTree() :root_(nullptr) {}
+	//初始化根节点和函数对象
+	BSTree(Compare comp=Compare()) 
+		:root_(nullptr),compare_(comp) 
+	{}
+	//层序遍历思想释放BST树所有的节点资源
 	~BSTree()
 	{
-
+		if (root_ != nullptr) {
+			queue<TreeNode*> s;
+			s.push(root_);
+			while (!s.empty()) {
+				TreeNode* front = s.front();
+				s.pop();
+				if (front->leftchild_ != nullptr)
+				{
+					s.push(front->leftchild_);
+				}
+				if (front->rightchild_ != nullptr)
+				{
+					s.push(front->rightchild_);
+				}
+				delete front;
+			}
+		}
 	}
 	//非递归插入操作
 	void non_insert(const T& val)
@@ -270,7 +290,7 @@ public:
 	}
 	//递归获取层数
 	int high() {
-		return level(root_);
+		return high(root_);
 	}
 	//递归求二叉树节点个数
 	int number() {
@@ -318,6 +338,55 @@ public:
 
 	}
 
+	//判断LCA问题
+	int getLCA(T val1, T val2) {
+		TreeNode* node = getLCA(root_, val1, val2);
+		if (node == nullptr) {
+			throw "no LCA!";
+		}
+		else {
+			return node->data_;
+		}
+	}
+
+	//镜像反转问题
+	void mirror01() {
+		mirror01(root_);
+	}
+	bool mirror02() {
+		if (root_ == nullptr) {
+			return true;
+		}
+		return mirror02(root_->leftchild_, root_->rightchild_);
+	}
+
+	//重建二叉树
+	void rebuild(T pre[], int i, int j, T in[], int m, int n) {
+		root_ = _rebuild(pre, i, j, in, m, n);
+	}
+
+	//判断平衡树
+	bool isBanlance() {
+		int l = 0;
+		bool flag = true;
+		isBanlance02(root_, l, flag);
+		return flag;
+	}
+
+	//求中序倒数第k个节点
+	int getVal(int k) {
+		TreeNode* node = getVal(root_, k);
+		if (node == nullptr)
+		{
+			string err = "no NO.";
+			err += k;
+			throw err;
+		}
+		else
+		{
+			return node->data_;
+		}
+	}
 private:
 	//节点定义
 	struct TreeNode
@@ -357,12 +426,12 @@ private:
 		}
 	}
 	//递归求BST的层数 求以node为根节点的子树的高度并且返回高度值
-	int level(TreeNode* node) {
+	int high(TreeNode* node) {
 		if (node == nullptr) {
 			return 0;
 		}
-		int left = level(node->leftchild_);
-		int right = level(node->rightchild_);
+		int left = high(node->leftchild_);
+		int right = high(node->rightchild_);
 		return left > right ? left + 1 : right + 1;
 	}
 	//递归求BST的节点总数 求以node为根节点的树的节点总数，并且返回
@@ -526,6 +595,7 @@ private:
 
 	}
 
+	//判断子树
 	bool isChildTree(TreeNode* father, TreeNode* child) {
 		if (father == nullptr && child == nullptr) {
 			return true;
@@ -545,7 +615,136 @@ private:
 			&& isChildTree(father->rightchild_, child->rightchild_);//R
 	}
 
+	//获取LCA
+	TreeNode* getLCA(TreeNode* node, T& val1, T& val2) {
 
+		if (node == nullptr) {
+			return nullptr;
+		}
+		if (compare_(node->data_, val1) && compare_(node->data_, val2)) {
+			return getLCA(node->rightchild_, val1, val2);
+		}
+		else if (compare_(val1, node->data_) && compare_(val2, node->data_)) {
+			return getLCA(node->leftchild_, val1, val2);
+		}
+		else
+		{
+			return node;
+		}
+	}
+
+	//镜像反转
+	void mirror01(TreeNode* node) {
+		if (node == nullptr) {
+			return;
+		}
+
+		//前序遍历
+		//V
+		//翻转树节点的左右孩子节点地址
+		TreeNode* tmp = node->leftchild_;
+		node->leftchild_ = node->rightchild_;
+		node->rightchild_ = tmp;
+
+		mirror01(node->leftchild_);//L
+		mirror01(node->rightchild_);//R
+	}
+
+	//镜像对称
+	bool mirror02(TreeNode* node1, TreeNode* node2) {
+		if (node1 == nullptr && node2 == nullptr) {
+			return true;
+		}
+		if (node1 == nullptr || node2 == nullptr) {
+			return false;
+		}
+		if (node1->data_ != node2->data_) {
+			return false;
+		}
+		return mirror02(node1->leftchild_, node2->rightchild_)
+			&& mirror02(node1->rightchild_, node2->leftchild_);
+	}
+
+	//重建二叉树递归实现 中序遍历和前序遍历
+	TreeNode* _rebuild(T pre[], int i, int j, T in[], int m, int n) {
+		if (i > j || m > n) {
+			return nullptr;
+		}
+
+		//创建当前子树的根节点
+		TreeNode* node = new TreeNode(pre[i]);//拿前序遍历序列的第一个数字创建子树的根节点
+		for (int k = m; k <= n; ++k) {
+			if (pre[i] == in[k]) {//在中序遍历中找到子树的根节点的下标k
+				node->leftchild_ = _rebuild(pre, i + 1, i + (k - m), in, m, k - 1);
+				node->rightchild_ = _rebuild(pre, i + (k - m) + 1, j, in, k + 1, n);
+				return node;
+			}
+		}
+		return node;
+	}
+
+	//判断BST树是否为平衡树 **这样写效率很低**
+	bool isBanlance01(TreeNode* node) {
+		if (node == nullptr) {
+			return true;
+		}
+		if (!isBanlance(node->leftchild_))//L
+		{
+			return false;
+		}
+		if (!isBanlance(node->rightchild_))//R
+		{
+			return false;
+		}
+		int left = high(node->leftchild_);
+		int right = high(node->rightchild_);
+		return (abs(left - right) <= 1);//V
+
+	}
+	
+	//判断BST树是否为平衡树 **效率高，在递归过程中记录了节点的高度值**
+	//其中l为高度值，高度值需要返回
+	int isBanlance02(TreeNode* node, int l, bool& flag) {
+		if (node == nullptr) {
+			return l;
+		}
+
+		int left = isBanlance02(node->leftchild_, l + 1, flag);
+		if (!flag) {
+			return left;
+		}
+		int right = isBanlance02(node->rightchild_, l + 1, flag);
+		if (!flag)
+		{
+			return right;
+		}
+
+		//V
+		if (abs(left - right) > 1)
+		{
+			flag = false;
+		}
+		return left > right ? left : right;
+	}
+
+	//求中序遍历倒数第k个节点
+	int i = 1;
+	TreeNode* getVal(TreeNode* node, int k) {
+		if (node == nullptr) {
+			return nullptr;
+		}
+
+		TreeNode* right = getVal(node->rightchild_, k);//R
+		if (right != nullptr) {
+			return right;
+		}
+		//V
+		if (i++ == k)//在RVL顺序下，找到正数第k个元素
+		{
+			return node;
+		}
+		return getVal(node->leftchild_, k);//L
+	}
 
 	TreeNode* root_;
 	Compare compare_;
@@ -590,12 +789,53 @@ void test02() { //测试子树
 
 
 }
+void test03() {//测试LCA
+	int arr[] = { 54,24,67,0,34,62,69,5,41,64,78 };
+	BSTree<int> bst;
+	for (int v : arr) {
+		bst.insert(v);
+	}
+	cout << bst.getLCA(5, 41) << endl;
+
+}
+void test04() {//测试镜像反转和镜像对称
+	int arr[] = { 54,24,67,0,34,62,69,5,41,64,78 };
+	BSTree<int> bst;
+	for (int v : arr) {
+		bst.insert(v);
+	}
+	bst.inOrder();
+	//翻转之后变成逆序
+	bst.mirror01();
+	bst.inOrder();
+	cout << bst.mirror02() << endl;
+}
+void test05() {
+	BSTree<int> bst;
+	int pre[] = { 58,24,0,5,34,41,67,62,64,69,78 };
+	int in[] = { 0,5,24,34,41,58,62,64,67,69,78 };
+	bst.rebuild(pre, 0, 10, in, 0, 10);
+	bst.preOrder();
+}
 #endif
 
 
+
 int main() {
+	//test03();
 	//test01();
-	test02();
+	//test02();
+	//test04();
+	//test05();
+#if 0
+	//可以在构造函数中传入一个函数对象，采用传入lambda的方式实现
+	using Elm = pair<int, string>;
+	using Functor = function<bool(Elm, Elm)>;
+	BSTree<Elm, Functor> bst1([](Elm p1, Elm p2)->bool {
+		return p1.first > p2.first;
+		});
+#endif
+
 #if 0
 	int arr[] = { 54,24,67,0,34,62,69,5,41,64,78 };
 	BSTree<int> bst;
@@ -603,7 +843,12 @@ int main() {
 		//bst.non_insert(v);
 		bst.insert(v);
 	}
+	cout << bst.isBanlance() << endl;
 	bst.non_insert(12);
+	cout << bst.isBanlance() << endl;
+	bst.inOrder();
+	cout << bst.getVal(4) << endl;
+
 	//cout << bst.non_query(12);
 	//bst.non_remove(12);
 	bst.remove(12);
